@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.vscode/**'
+      - '.idea/**'
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  aml-registry-contracts-validate:
+    name: Run aml-registry-contracts release
+    secrets: inherit
+    uses: ./.github/workflows/aml-registry-contracts-ci.yaml
+
+  aml-registry-contracts-release:
+    name: Run aml-registry-contracts release
+    secrets: inherit
+    uses: ./.github/workflows/aml-registry-contracts-cd.yaml
+    needs: aml-registry-contracts-validate
+
+  aml-registry-frontend-validate:
+    name: Run aml-registry-frontend release
+    secrets: inherit
+    uses: ./.github/workflows/aml-registry-frontend-ci.yaml
+
+  aml-registry-frontend-release:
+    name: Run aml-registry-frontend release
+    secrets: inherit
+    uses: ./.github/workflows/aml-registry-frontend-cd.yaml
+    needs: aml-registry-frontend-validate

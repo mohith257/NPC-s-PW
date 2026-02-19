@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 1.1.1
+_src_path: gh:algorandfoundation/algokit-react-frontend-template
+author_email: 186444126+zoror2@users.noreply.github.com.
+author_name: Prajwal H M
+cloud_provider: vercel
+preset_name: production
+project_name: aml-registry-frontend
+

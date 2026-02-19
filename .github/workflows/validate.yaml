@@ -1,0 +1,14 @@
+name: Pull Request validation
+
+on: [pull_request]
+
+
+jobs:
+  aml-registry-contracts-ci:
+    name: Run aml-registry-contracts validation
+    uses: ./.github/workflows/aml-registry-contracts-ci.yaml
+
+  aml-registry-frontend-ci:
+    name: Run aml-registry-frontend validation
+    uses: ./.github/workflows/aml-registry-frontend-ci.yaml
+
