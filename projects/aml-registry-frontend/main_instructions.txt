@@ -1,0 +1,1215 @@
+================================================================================
+    AML REGISTRY - ANTI-MONEY LAUNDERING SYSTEM ON ALGORAND BLOCKCHAIN
+    Complete Project Instructions & Development Guide
+================================================================================
+
+PROJECT INFORMATION
+================================================================================
+Project Name:       AML Registry (Anti-Money Laundering Compliance System)
+Hackathon:          RIFT 2026 - Algorand Open Innovation Track
+Team:               NPC's PW
+Developer:          Mohith (mohith257)
+GitHub Repository:  https://github.com/mohith257/NPC-s-PW
+Project Location:   D:\Samudra\aml-registry\
+
+PROJECT CONCEPT
+================================================================================
+Build a DUAL-DASHBOARD AML compliance system on Algorand blockchain that:
+
+1. TRACKS WALLET RISK PROFILES using graph analysis (NetworkX)
+2. STORES AML DATA ON-CHAIN via Algorand smart contracts
+3. PROVIDES TWO INTERFACES:
+   
+   A. BANK A DASHBOARD (Fraud Detection Lab)
+      - Upload transaction CSV files
+      - Detect money mule rings using graph algorithms
+      - Visualize transaction networks
+      - Flag suspicious accounts to blockchain
+      - Download analysis reports
+   
+   B. BANK B DASHBOARD (Account Screening)
+      - Check if customer is flagged in registry
+      - Query blockchain in real-time
+      - Block flagged accounts from opening accounts
+      - View risk scores and blockchain proof
+
+KEY INNOVATION: Privacy-preserving cross-bank fraud intelligence sharing
+- Banks flag suspicious accounts using SHA-256 hashes
+- No PII (Personally Identifiable Information) stored on blockchain
+- Competing banks can check flagged accounts without revealing customer data
+- Immutable audit trail on Algorand blockchain
+
+
+TECHNOLOGY STACK
+================================================================================
+
+BLOCKCHAIN LAYER:
+- Algorand Blockchain (Layer 1)
+- AlgoKit Framework v2.10.2
+- PuyaPy (Native Algorand Python Smart Contracts)
+- LocalNet (Development) → TestNet (Demo)
+
+SMART CONTRACT:
+- Language: Python (PuyaPy/algopy)
+- Storage: Box Storage for wallet profiles
+- Interface: ARC-4 ABI methods
+- Features: Risk scoring, flagging, querying
+
+FRONTEND:
+- React 18 (TypeScript)
+- Tailwind CSS
+- React Flow (graph visualization)
+- AlgoKit Utils (blockchain integration)
+- Vercel (deployment)
+
+BACKEND:
+- Python FastAPI
+- NetworkX (graph analysis & cycle detection)
+- SHA-256 hashing (privacy)
+- Railway/Render (deployment)
+
+DEVELOPMENT TOOLS:
+- VS Code
+- Docker Desktop (for LocalNet)
+- Poetry (Python dependencies)
+- npm (Node.js packages)
+- Git + GitHub
+
+
+PROJECT STRUCTURE
+================================================================================
+
+D:\Samudra\
+├── venv\                               # Python virtual environment (shared)
+├── main_instructions.txt               # THIS FILE - Complete guide
+├── Algorand.txt                        # Hackathon requirements
+├── instructions.txt                    # Original PRD
+├── Money_mulling.txt                   # Money muling challenge details
+│
+└── aml-registry\                       # ⭐ MAIN PROJECT WORKSPACE ⭐
+    │
+    ├── .algokit/                       # AlgoKit configuration
+    ├── .github/                        # GitHub Actions CI/CD
+    │   └── workflows/
+    │       ├── cd.yaml                 # Continuous Deployment
+    │       └── ci.yaml                 # Continuous Integration
+    │
+    ├── .vscode/                        # VS Code settings
+    │   ├── launch.json                 # Debugger config
+    │   └── settings.json               # Workspace settings
+    │
+    ├── projects/
+    │   │
+    │   ├── aml-registry-contracts/     # 📜 SMART CONTRACT PROJECT
+    │   │   ├── smart_contracts/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── __main__.py
+    │   │   │   └── aml_registry/
+    │   │   │       ├── __init__.py
+    │   │   │       ├── contract.py     # ⭐ MAIN CONTRACT FILE ⭐
+    │   │   │       └── deploy_config.py
+    │   │   │
+    │   │   ├── tests/                  # Contract unit tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── conftest.py
+    │   │   │   └── test_contract.py
+    │   │   │
+    │   │   ├── pyproject.toml          # Python dependencies
+    │   │   ├── poetry.lock
+    │   │   └── README.md
+    │   │
+    │   └── aml-registry-frontend/      # ⚛️ REACT FRONTEND PROJECT
+    │       ├── src/
+    │       │   ├── components/         # React components
+    │       │   │   ├── Account.tsx
+    │       │   │   ├── AppCalls.tsx
+    │       │   │   ├── ConnectWallet.tsx
+    │       │   │   └── Transact.tsx
+    │       │   │
+    │       │   ├── pages/              # Dashboard pages (TO CREATE)
+    │       │   │   ├── BankADashboard.tsx
+    │       │   │   ├── BankBDashboard.tsx
+    │       │   │   └── GraphVisualization.tsx
+    │       │   │
+    │       │   ├── contracts/          # Auto-generated ABI clients
+    │       │   ├── utils/              # Helper functions
+    │       │   ├── App.tsx             # Main app
+    │       │   └── main.tsx            # Entry point
+    │       │
+    │       ├── public/
+    │       ├── package.json            # npm dependencies
+    │       ├── tailwind.config.js      # Tailwind CSS config
+    │       └── vite.config.ts          # Vite bundler config
+    │
+    ├── backend/                        # 🐍 PYTHON BACKEND (TO CREATE)
+    │   ├── main.py                     # FastAPI server
+    │   ├── graph_analyzer.py           # NetworkX graph analysis
+    │   ├── risk_calculator.py          # Risk scoring logic
+    │   ├── models.py                   # Pydantic schemas
+    │   └── requirements.txt
+    │
+    ├── .algokit.toml                   # AlgoKit project config
+    ├── .gitignore
+    └── README.md
+
+
+COMPLETED SETUP (PHASE 1)
+================================================================================
+✅ Python 3.13.11 installed
+✅ Node.js v22.18.0 + npm 10.9.3 installed
+✅ Docker Desktop 28.4.0 installed
+✅ Virtual environment created at D:\Samudra\venv
+✅ AlgoKit 2.10.2 installed via pipx
+✅ Poetry 2.3.2 installed
+✅ GitHub repository created: mohith257/NPC-s-PW
+✅ AlgoKit project initialized:
+   - Template: Smart Contracts & DApp Frontend (Production)
+   - Language: Python (PuyaPy)
+   - Contract name: aml_registry
+   - Frontend: React + TypeScript + Tailwind CSS
+   - Package manager: npm
+   - Hosting: Vercel
+✅ Project pushed to GitHub (122 files, initial commit)
+✅ VS Code workspace opened: aml-registry (Workspace)
+✅ Dependencies installed (Poetry + npm)
+
+CURRENT STATUS: Ready to start Phase 2 (Smart Contract Development)
+
+
+HOW TO USE THIS GUIDE
+================================================================================
+
+IMPORTANT: TWO VS CODE WINDOWS
+
+You will work with TWO separate VS Code windows:
+
+   WINDOW 1: D:\Samudra\ (OLD WINDOW)
+   ├── Contains: main_instructions.txt, Algorand.txt, etc.
+   ├── Use for: Reading instructions, GitHub Copilot Chat
+   └── Do NOT edit code here
+   
+   WINDOW 2: aml-registry (WORKSPACE) ⭐ WORK HERE ⭐
+   ├── Contains: Full AlgoKit project
+   ├── Use for: Editing code, running commands, building, deploying
+   └── This is where all development happens
+
+WORKFLOW:
+1. Read instructions in WINDOW 1 (this file or Copilot Chat)
+2. Switch to WINDOW 2 (aml-registry workspace)
+3. Edit code, run commands
+4. Copy outputs if needed
+5. Switch back to WINDOW 1 for next instructions
+6. Repeat!
+
+TIP: Use Windows Snap (Win + Left/Right arrow) to split screen
+
+
+DEVELOPMENT PHASES
+================================================================================
+
+PHASE 2: SMART CONTRACT DEVELOPMENT                           [⏳ NEXT STEP]
+================================================================================
+
+GOAL: Build the AML Registry smart contract with wallet risk profiling
+
+LOCATION: Work in WINDOW 2 (aml-registry workspace)
+FILE: projects/aml-registry-contracts/smart_contracts/aml_registry/contract.py
+
+STEP 1: Open the Contract File
+-------------------------------
+In aml-registry workspace:
+1. Navigate to: projects/aml-registry-contracts/smart_contracts/aml_registry/
+2. Open: contract.py
+3. You'll see default "Hello World" boilerplate code
+
+STEP 2: Replace with AML Registry Logic
+----------------------------------------
+Delete ALL existing code in contract.py and replace with:
+
+```python
+from algopy import ARC4Contract, String, UInt64, Txn, Global, gtxn
+from algopy.arc4 import abimethod, Address, Struct
+
+
+class WalletRiskProfile(Struct):
+    """Risk profile for a wallet address"""
+    wallet: Address
+    risk_score: UInt64  # 0-100 scale
+    transaction_count: UInt64
+    flagged_connections: UInt64
+    last_updated: UInt64  # Timestamp
+    is_flagged: bool
+
+
+class AMLRegistry(ARC4Contract):
+    """
+    Anti-Money Laundering Registry Smart Contract
+    Stores wallet risk profiles and AML flags on Algorand blockchain
+    """
+
+    @abimethod
+    def register_wallet(
+        self,
+        wallet: Address,
+        risk_score: UInt64,
+        transaction_count: UInt64,
+        flagged_connections: UInt64,
+    ) -> String:
+        """
+        Register a new wallet with its risk profile
+        Only authorized addresses can register wallets
+        """
+        # Store wallet risk profile in box storage
+        profile = WalletRiskProfile(
+            wallet=wallet,
+            risk_score=risk_score,
+            transaction_count=transaction_count,
+            flagged_connections=flagged_connections,
+            last_updated=Global.latest_timestamp,
+            is_flagged=risk_score >= UInt64(70),  # Auto-flag if risk >= 70
+        )
+        
+        # Save to box storage (key: wallet address)
+        self.box_put(wallet.bytes, profile.bytes)
+        
+        return String("Wallet registered successfully")
+
+    @abimethod
+    def update_risk_score(
+        self,
+        wallet: Address,
+        new_risk_score: UInt64,
+    ) -> String:
+        """
+        Update risk score for an existing wallet
+        """
+        # Retrieve existing profile
+        profile_bytes = self.box_get(wallet.bytes)
+        profile = WalletRiskProfile.from_bytes(profile_bytes)
+        
+        # Update risk score and flag status
+        profile.risk_score = new_risk_score
+        profile.is_flagged = new_risk_score >= UInt64(70)
+        profile.last_updated = Global.latest_timestamp
+        
+        # Save updated profile
+        self.box_put(wallet.bytes, profile.bytes)
+        
+        return String("Risk score updated")
+
+    @abimethod
+    def get_risk_profile(self, wallet: Address) -> WalletRiskProfile:
+        """
+        Retrieve risk profile for a wallet
+        """
+        profile_bytes = self.box_get(wallet.bytes)
+        return WalletRiskProfile.from_bytes(profile_bytes)
+
+    @abimethod
+    def flag_wallet(self, wallet: Address, reason: String) -> String:
+        """
+        Manually flag a wallet for suspicious activity
+        """
+        profile_bytes = self.box_get(wallet.bytes)
+        profile = WalletRiskProfile.from_bytes(profile_bytes)
+        
+        profile.is_flagged = True
+        profile.last_updated = Global.latest_timestamp
+        
+        self.box_put(wallet.bytes, profile.bytes)
+        
+        return String("Wallet flagged: ") + reason
+
+    @abimethod
+    def is_wallet_flagged(self, wallet: Address) -> bool:
+        """
+        Check if a wallet is flagged
+        """
+        profile_bytes = self.box_get(wallet.bytes)
+        profile = WalletRiskProfile.from_bytes(profile_bytes)
+        return profile.is_flagged
+```
+
+Save the file (Ctrl+S)
+
+STEP 3: Build the Smart Contract
+---------------------------------
+Open terminal in aml-registry workspace (Ctrl+`):
+
+```bash
+# Navigate to contracts folder
+cd projects/aml-registry-contracts
+
+# Build the contract (compiles Python to TEAL)
+algokit project run build
+```
+
+Expected output:
+✅ Contract compiled successfully
+✅ TEAL bytecode generated
+✅ ABI JSON created
+
+If errors occur:
+- Check Python syntax
+- Ensure algopy imports are correct
+- Verify indentation
+
+STEP 4: Start LocalNet (Local Blockchain)
+------------------------------------------
+```bash
+# Start Algorand LocalNet in Docker
+algokit localnet start
+```
+
+Expected output:
+✅ LocalNet started successfully
+✅ Running on http://localhost:4001
+
+STEP 5: Deploy to LocalNet
+---------------------------
+```bash
+# Deploy smart contract to LocalNet
+algokit project deploy localnet
+```
+
+Expected output:
+✅ Contract deployed
+✅ App ID: [NUMBER] (save this!)
+
+STEP 6: Run Tests
+------------------
+```bash
+# Run unit tests
+algokit project run test
+```
+
+STEP 7: Commit to GitHub
+-------------------------
+```bash
+# Go back to root
+cd ../..
+
+# Add changes
+git add .
+
+# Commit
+git commit -m "feat: Implement AML Registry smart contract with risk profiling"
+
+# Push
+git push origin main
+```
+
+DELIVERABLES:
+✅ AML Registry smart contract compiled to TEAL
+✅ Deployed on LocalNet with App ID
+✅ Unit tests passing
+✅ ABI JSON generated for frontend integration
+✅ Code pushed to GitHub
+
+
+PHASE 3: BACKEND ANALYTICS (NETWORKX)                         [⏳ PENDING]
+================================================================================
+
+GOAL: Build Python backend for transaction graph analysis and money mule detection
+
+LOCATION: aml-registry/backend/ (to be created)
+
+STEP 1: Create Backend Folder
+------------------------------
+```bash
+# In aml-registry root
+mkdir backend
+cd backend
+```
+
+STEP 2: Create Backend Files
+-----------------------------
+Create these files:
+
+1. requirements.txt
+-------------------
+```
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+networkx==3.4.2
+pandas==2.2.3
+algorand-python-sdk==2.8.0
+python-multipart==0.0.17
+pydantic==2.10.3
+```
+
+2. main.py (FastAPI Server)
+----------------------------
+```python
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from graph_analyzer import analyze_transactions
+from risk_calculator import calculate_wallet_risk
+import hashlib
+
+app = FastAPI(title="AML Registry Backend")
+
+# CORS for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.post("/analyze")
+async def analyze_csv(file: UploadFile = File(...)):
+    """
+    Analyze uploaded transaction CSV
+    Returns: Mule rings, suspicious accounts, graph data
+    """
+    contents = await file.read()
+    results = analyze_transactions(contents)
+    return results
+
+@app.post("/hash")
+async def hash_identity(name: str, ssn: str):
+    """
+    Hash customer identity (SHA-256)
+    """
+    identity = f"{name}|{ssn}"
+    hashed = hashlib.sha256(identity.encode()).hexdigest()
+    return {"hash": hashed}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+```
+
+3. graph_analyzer.py (NetworkX Logic)
+--------------------------------------
+```python
+import networkx as nx
+import pandas as pd
+from io import StringIO
+
+def analyze_transactions(csv_data: bytes):
+    """
+    Analyze transaction CSV for money mule patterns
+    """
+    # Parse CSV
+    df = pd.read_csv(StringIO(csv_data.decode('utf-8')))
+    
+    # Build directed graph
+    G = nx.DiGraph()
+    
+    for _, row in df.iterrows():
+        G.add_edge(
+            row['from_account'],
+            row['to_account'],
+            amount=row['amount'],
+            timestamp=row['timestamp']
+        )
+    
+    # DETECTION 1: Cycle Detection (Money Mule Rings)
+    cycles = list(nx.simple_cycles(G))
+    mule_rings = [c for c in cycles if 3 <= len(c) <= 5]
+    
+    # DETECTION 2: Smurfing (Fan-in/Fan-out patterns)
+    smurfing_accounts = []
+    for node in G.nodes():
+        in_degree = G.in_degree(node)
+        out_degree = G.out_degree(node)
+        
+        # 10+ small transactions → 1 large outflow
+        if in_degree >= 10 and out_degree == 1:
+            smurfing_accounts.append(node)
+    
+    # DETECTION 3: Shell Networks (Dormant chains)
+    shell_chains = []
+    for path in nx.all_simple_paths(G, source, target, cutoff=5):
+        if len(path) >= 4:
+            # Check if intermediaries have low activity
+            intermediates = path[1:-1]
+            if all(G.degree(n) <= 3 for n in intermediates):
+                shell_chains.append(path)
+    
+    # Calculate risk scores
+    suspicious_accounts = set()
+    for ring in mule_rings:
+        suspicious_accounts.update(ring)
+    suspicious_accounts.update(smurfing_accounts)
+    
+    risk_scores = {}
+    for account in suspicious_accounts:
+        score = calculate_risk(G, account, mule_rings, smurfing_accounts)
+        risk_scores[account] = score
+    
+    return {
+        "mule_rings": mule_rings,
+        "smurfing_accounts": smurfing_accounts,
+        "shell_chains": shell_chains,
+        "risk_scores": risk_scores,
+        "graph_data": {
+            "nodes": list(G.nodes()),
+            "edges": [{"from": u, "to": v} for u, v in G.edges()]
+        }
+    }
+
+def calculate_risk(G, account, mule_rings, smurfing_accounts):
+    """
+    Calculate risk score (0-100)
+    """
+    score = 0
+    
+    # In mule ring: +40 points
+    if any(account in ring for ring in mule_rings):
+        score += 40
+    
+    # Smurfing pattern: +30 points
+    if account in smurfing_accounts:
+        score += 30
+    
+    # High centrality: +20 points
+    centrality = nx.betweenness_centrality(G).get(account, 0)
+    score += int(centrality * 20)
+    
+    # High transaction count: +10 points
+    if G.degree(account) > 50:
+        score += 10
+    
+    return min(score, 100)
+```
+
+STEP 3: Run Backend Locally
+----------------------------
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start server
+uvicorn main:app --reload --port 8000
+```
+
+Test: http://localhost:8000/health
+
+STEP 4: Test with Sample CSV
+-----------------------------
+Create test/sample_transactions.csv:
+```csv
+from_account,to_account,amount,timestamp
+ACC_001,ACC_002,500,2026-02-01T10:00:00
+ACC_002,ACC_003,480,2026-02-01T10:05:00
+ACC_003,ACC_001,460,2026-02-01T10:10:00
+ACC_010,ACC_011,50,2026-02-01T11:00:00
+ACC_010,ACC_011,50,2026-02-01T11:05:00
+...
+```
+
+DELIVERABLES:
+✅ FastAPI backend running
+✅ NetworkX graph analysis working
+✅ Cycle detection implemented
+✅ Risk scoring algorithm tested
+
+
+PHASE 4: BANK A DASHBOARD (FRAUD DETECTION)                   [⏳ PENDING]
+================================================================================
+
+GOAL: Build dashboard for uploading CSVs and detecting mule rings
+
+LOCATION: aml-registry-frontend/src/pages/BankADashboard.tsx
+
+FEATURES:
+- CSV drag-and-drop upload
+- React Flow graph visualization
+- Highlighted mule nodes (red)
+- Download JSON report
+- "Flag to Registry" button (signs blockchain transaction)
+- Hidden honeypot field (bot trap)
+
+STEP 1: Install Additional Dependencies
+----------------------------------------
+```bash
+cd projects/aml-registry-frontend
+npm install @xyflow/react @algorandfoundation/algokit-utils
+```
+
+STEP 2: Create BankADashboard.tsx
+----------------------------------
+(Full component code provided in separate instructions)
+
+STEP 3: Test Locally
+---------------------
+```bash
+npm run dev
+```
+
+Visit: http://localhost:5173
+
+DELIVERABLES:
+✅ Bank A dashboard functional
+✅ CSV upload working
+✅ Graph visualization displayed
+✅ Connected to backend API
+✅ Blockchain integration ready
+
+
+PHASE 5: BANK B DASHBOARD (ACCOUNT SCREENING)                 [⏳ PENDING]
+================================================================================
+
+GOAL: Build dashboard for checking if customer is flagged
+
+LOCATION: aml-registry-frontend/src/pages/BankBDashboard.tsx
+
+FEATURES:
+- Customer name + ID input form
+- "Check AML Registry" button
+- Hash customer data locally (SHA-256)
+- Query smart contract global state
+- Display "BLOCKED" or "APPROVED"
+- Show blockchain proof link
+
+STEP 1: Create BankBDashboard.tsx
+----------------------------------
+(Full component code provided in separate instructions)
+
+STEP 2: Test Query Functionality
+---------------------------------
+- Enter test customer data
+- Verify hash generation
+- Check smart contract query
+- Confirm results display
+
+DELIVERABLES:
+✅ Bank B dashboard functional
+✅ Query functionality working
+✅ Real-time blockchain reads
+✅ No wallet required for queries
+
+
+PHASE 6: TESTNET DEPLOYMENT                                   [⏳ PENDING]
+================================================================================
+
+GOAL: Deploy to Algorand TestNet for live demo
+
+PREREQUISITES:
+- Pera Wallet installed (mobile or browser extension)
+- TestNet ALGOs (get from https://bank.testnet.algorand.network/)
+- GitHub repo public
+
+STEP 1: Get TestNet Funds
+--------------------------
+1. Install Pera Wallet: https://perawallet.app/
+2. Create wallet and switch to TestNet
+3. Copy wallet address
+4. Visit: https://bank.testnet.algorand.network/
+5. Paste address, click "Dispense"
+6. Receive ~10 TestNet ALGOs
+
+STEP 2: Configure TestNet Deployment
+-------------------------------------
+```bash
+# In aml-registry-contracts folder
+algokit project deploy testnet
+```
+
+Follow prompts to connect wallet
+
+STEP 3: Save App ID
+-------------------
+After deployment:
+✅ Contract deployed to TestNet
+✅ App ID: [NUMBER] ← SAVE THIS!
+✅ Transaction ID: [TXID]
+
+Verify on explorer:
+https://testnet.algoexplorer.io/application/[APP_ID]
+
+STEP 4: Update Frontend Config
+-------------------------------
+Update frontend to use TestNet endpoints:
+```typescript
+const ALGOD_SERVER = 'https://testnet-api.algonode.cloud'
+const INDEXER_SERVER = 'https://testnet-idx.algonode.cloud'
+const APP_ID = [YOUR_APP_ID]
+```
+
+STEP 5: Deploy Frontend to Vercel
+----------------------------------
+```bash
+cd projects/aml-registry-frontend
+
+# Build production version
+npm run build
+
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel --prod
+```
+
+Follow prompts, get live URL
+
+STEP 6: Deploy Backend to Railway
+----------------------------------
+1. Visit https://railway.app/
+2. Connect GitHub repo
+3. Select backend folder
+4. Add environment variables
+5. Deploy
+
+DELIVERABLES:
+✅ Smart contract on TestNet with App ID
+✅ Frontend live on Vercel
+✅ Backend live on Railway
+✅ All systems connected
+✅ Demo-ready
+
+
+PHASE 7: DOCUMENTATION & DEMO VIDEO                           [⏳ PENDING]
+================================================================================
+
+GOAL: Prepare comprehensive documentation and demo video
+
+STEP 1: Update README.md
+-------------------------
+Include:
+- Project description
+- Architecture diagram
+- Setup instructions
+- Live demo links
+- App ID and explorer link
+- Team information
+- Hackathon submission
+
+STEP 2: Record Demo Video (5-10 minutes)
+-----------------------------------------
+Script:
+[0:00-1:00] Problem Introduction
+- Cross-bank AML challenge
+- Privacy concerns
+- Need for decentralized solution
+
+[1:00-3:00] Architecture Overview
+- Show diagram
+- Explain: Frontend → Backend → Smart Contract
+- Highlight: NetworkX + Algorand + React Flow
+
+[3:00-6:00] Live Demo
+- Bank A: Upload CSV → Show graph → Flag accounts
+- Show TestNet transaction signing
+- Bank B: Check customer → Show "BLOCKED" result
+- Display TestNet explorer proof
+
+[6:00-8:00] Technical Deep Dive
+- Smart contract code walkthrough
+- NetworkX cycle detection explanation
+- Privacy-preserving hashing demo
+- AlgoKit features used
+
+[8:00-10:00] Impact & Future
+- Industry applications
+- Scalability discussion
+- Future enhancements
+- Call to action
+
+STEP 3: Create Pitch Deck
+--------------------------
+Slides:
+1. Title slide
+2. Problem statement
+3. Solution architecture
+4. Technical innovation
+5. Demo screenshots
+6. Use cases
+7. Market opportunity
+8. Team
+9. Thank you + Links
+
+DELIVERABLES:
+✅ Comprehensive README
+✅ Demo video (YouTube/LinkedIn)
+✅ Pitch deck (PDF)
+✅ All documentation complete
+✅ Ready for submission
+
+
+ALGORAND HACKATHON REQUIREMENTS CHECKLIST
+================================================================================
+
+MANDATORY REQUIREMENTS (From Algorand.txt):
+✅ Smart contract deployed to Algorand TestNet
+✅ AlgoKit used as primary development framework
+✅ App ID provided at submission
+✅ Meaningful Algorand interaction (not just payments)
+✅ Project uses AlgoKit for scaffolding
+✅ Clean, auditable smart contract code
+✅ Smooth UX hiding blockchain complexity
+✅ Testnet explorer link provided
+✅ Public GitHub repository
+✅ Demo video completed
+
+JUDGING CRITERIA:
+✅ Real problem being solved
+✅ Technical depth demonstrated
+✅ Innovation in approach
+✅ Quality of implementation
+✅ Comprehensive documentation
+✅ Clear presentation/demo
+
+
+TECHNICAL IMPLEMENTATION DETAILS
+================================================================================
+
+SMART CONTRACT DATA MODEL
+--------------------------
+class WalletRiskProfile(Struct):
+    wallet: Address              # Algorand address
+    risk_score: UInt64          # 0-100 (0=safe, 100=high risk)
+    transaction_count: UInt64   # Total transactions
+    flagged_connections: UInt64 # Connections to flagged wallets
+    last_updated: UInt64        # Unix timestamp
+    is_flagged: bool            # AML flag status
+
+Storage: Box storage (allows unlimited wallets)
+Auto-flag threshold: risk_score >= 70
+
+RISK SCORING ALGORITHM
+----------------------
+Risk Score = (
+    0.40 × mule_ring_detection +
+    0.30 × smurfing_pattern +
+    0.20 × network_centrality +
+    0.10 × transaction_velocity
+)
+
+Scale: 0-100
+- 0-30: Low risk (green)
+- 31-69: Medium risk (yellow)
+- 70-100: High risk (red, auto-flagged)
+
+NETWORKX GRAPH STRUCTURE
+-------------------------
+Nodes: Wallet addresses
+Edges: Transactions (directed)
+
+Node attributes:
+- risk_score
+- transaction_count
+- first_seen
+- flag_status
+
+Edge attributes:
+- amount
+- timestamp
+- transaction_type
+
+DETECTION ALGORITHMS
+--------------------
+1. CYCLE DETECTION (Mule Rings)
+   - Uses: nx.simple_cycles()
+   - Finds: 3-5 node cycles
+   - Pattern: A→B→C→A (circular transfers)
+
+2. SMURFING DETECTION (Structuring)
+   - Looks for: Many small IN → One large OUT
+   - Threshold: 10+ incoming, 1 outgoing
+   - Typical: Breaking large amounts into small deposits
+
+3. SHELL NETWORK DETECTION
+   - Finds: Long chains with dormant intermediaries
+   - Pattern: A→B→C→D→E where B,C,D have low activity
+   - Typical: Layering through shell accounts
+
+PRIVACY-PRESERVING HASHING
+---------------------------
+Input: Customer name + ID/SSN
+Process: SHA-256(name|id)
+Output: 64-char hex string
+Storage: Only hash stored on blockchain
+Verification: Bank B hashes same input → matches if flagged
+Privacy: Cannot reverse hash to reveal identity
+
+
+TROUBLESHOOTING GUIDE
+================================================================================
+
+PROBLEM: "algokit: command not found"
+SOLUTION:
+```bash
+pipx ensurepath
+# Close and reopen terminal
+algokit --version
+```
+
+PROBLEM: "Docker daemon not running"
+SOLUTION:
+- Open Docker Desktop application
+- Wait for "Engine running" status
+- Run: docker ps (should work without errors)
+
+PROBLEM: Smart contract build fails
+SOLUTION:
+```bash
+cd projects/aml-registry-contracts
+poetry install
+algokit project run build --verbose
+# Check error messages for syntax issues
+```
+
+PROBLEM: Frontend not connecting to backend
+SOLUTION:
+- Check backend is running: http://localhost:8000/health
+- Check CORS settings in main.py
+- Verify API endpoint URLs in frontend code
+
+PROBLEM: Git push denied (403 error)
+SOLUTION:
+- Use Personal Access Token instead of password
+- Generate at: https://github.com/settings/tokens
+- When git asks for password, paste TOKEN
+
+PROBLEM: LocalNet won't start
+SOLUTION:
+```bash
+# Stop any running LocalNet
+algokit localnet stop
+
+# Reset LocalNet
+algokit localnet reset
+
+# Start fresh
+algokit localnet start
+```
+
+PROBLEM: TestNet deployment fails
+SOLUTION:
+- Check TestNet ALGO balance in Pera Wallet
+- Ensure wallet is connected
+- Try: algokit project deploy testnet --verbose
+
+
+GIT WORKFLOW & BEST PRACTICES
+================================================================================
+
+BRANCH STRATEGY:
+- main: Production-ready code
+- develop: Active development
+- feature/*: Individual features
+
+COMMIT MESSAGE CONVENTION:
+```
+feat: Add new feature
+fix: Bug fix
+docs: Documentation update
+test: Test additions
+refactor: Code refactoring
+style: Formatting changes
+chore: Maintenance tasks
+deploy: Deployment changes
+```
+
+COMMIT FREQUENCY:
+- After each phase completion
+- After major feature implementations
+- Before attempting risky changes
+- At end of each work session
+
+EXAMPLE COMMITS:
+```bash
+git add .
+git commit -m "feat: Implement AML Registry smart contract"
+git commit -m "feat: Add NetworkX cycle detection algorithm"
+git commit -m "feat: Build Bank A dashboard with CSV upload"
+git commit -m "feat: Implement Bank B query interface"
+git commit -m "deploy: Deploy smart contract to TestNet"
+git commit -m "docs: Add comprehensive README and demo video"
+git push origin main
+```
+
+
+KEY RESOURCES & DOCUMENTATION
+================================================================================
+
+ALGORAND & ALGOKIT:
+- AlgoKit CLI: https://github.com/algorandfoundation/algokit-cli
+- PuyaPy Docs: https://algorandfoundation.github.io/puya/
+- Algorand Developer Portal: https://developer.algorand.org/
+- AlgoKit Utils: https://github.com/algorandfoundation/algokit-utils-ts
+- TestNet Explorer: https://testnet.algoexplorer.io/
+- TestNet Dispenser: https://bank.testnet.algorand.network/
+
+GRAPH ANALYSIS:
+- NetworkX Docs: https://networkx.org/documentation/stable/
+- Graph Algorithms: https://networkx.org/documentation/stable/reference/algorithms/
+- Cycle Detection: https://networkx.org/documentation/stable/reference/algorithms/cycles.html
+
+FRONTEND:
+- React Docs: https://react.dev/
+- TypeScript: https://www.typescriptlang.org/docs/
+- Tailwind CSS: https://tailwindcss.com/docs
+- React Flow: https://reactflow.dev/
+- Vite: https://vitejs.dev/
+
+BACKEND:
+- FastAPI Docs: https://fastapi.tiangolo.com/
+- Pandas: https://pandas.pydata.org/docs/
+- Pydantic: https://docs.pydantic.dev/
+
+DEPLOYMENT:
+- Vercel Docs: https://vercel.com/docs
+- Railway Docs: https://docs.railway.app/
+- Docker: https://docs.docker.com/
+
+
+SUCCESS METRICS & SUBMISSION CHECKLIST
+================================================================================
+
+TECHNICAL COMPLETENESS:
+□ Smart contract compiles without errors
+□ Smart contract deployed to TestNet
+□ App ID obtained and documented
+□ All ABI methods functional
+□ Unit tests written and passing
+□ Frontend builds without errors
+□ Backend API endpoints working
+□ Integration tests passing
+
+FUNCTIONALITY:
+□ Bank A can upload CSV files
+□ Graph visualization displays correctly
+□ Mule rings detected accurately
+□ Risk scores calculated correctly
+□ Flagging to blockchain works
+□ Bank B can query registry
+□ Blocked/approved results accurate
+□ Blockchain proof links work
+
+DOCUMENTATION:
+□ README.md comprehensive
+□ Architecture diagram included
+□ Setup instructions clear
+□ API documentation complete
+□ Code comments adequate
+□ Demo video recorded
+□ Pitch deck prepared
+
+DEPLOYMENT:
+□ Smart contract on TestNet
+□ Frontend live on Vercel
+□ Backend deployed (Railway/Render)
+□ All systems connected
+□ Public URLs working
+□ GitHub repo public
+
+HACKATHON REQUIREMENTS:
+□ AlgoKit used throughout
+□ App ID provided
+□ TestNet explorer link
+□ Meaningful blockchain use
+□ Video demonstrates features
+□ Public GitHub repository
+□ LinkedIn post with tags
+
+
+IMPORTANT REMINDERS
+================================================================================
+
+1. ALWAYS WORK IN THE aml-registry (WORKSPACE) WINDOW
+   - NOT in D:\Samudra\ window
+   - Check VS Code title bar to confirm
+
+2. ACTIVATE VIRTUAL ENVIRONMENT
+   ```bash
+   .\venv\Scripts\Activate.ps1
+   # You should see (venv) in prompt
+   ```
+
+3. COMMIT FREQUENTLY
+   - After each phase
+   - Before risky changes
+   - At end of work sessions
+
+4. TEST LOCALLY FIRST
+   - Use LocalNet before TestNet
+   - Test all features thoroughly
+   - Fix bugs before deployment
+
+5. SAVE APP ID
+   - Critical for submission
+   - Document in README
+   - Include explorer link
+
+6. RECORD DEMO EARLY
+   - Don't wait until last minute
+   - Have backup recording
+   - Test audio/video quality
+
+7. CHECK REQUIREMENTS
+   - Review Algorand.txt regularly
+   - Ensure all criteria met
+   - Verify submission format
+
+
+PROJECT TIMELINE ESTIMATE
+================================================================================
+
+PHASE 2: Smart Contract Development        [2-3 hours]
+PHASE 3: Backend Analytics                 [3-4 hours]
+PHASE 4: Bank A Dashboard                  [4-5 hours]
+PHASE 5: Bank B Dashboard                  [2-3 hours]
+PHASE 6: TestNet Deployment               [2-3 hours]
+PHASE 7: Documentation & Demo             [3-4 hours]
+Testing & Bug Fixes                       [4-6 hours]
+Buffer for Issues                         [4-6 hours]
+-------------------------------------------------------
+TOTAL ESTIMATED TIME:                     [24-34 hours]
+
+Hackathon duration: 48 hours
+Recommended: Start immediately, allocate time for rest
+
+
+CONTACT & SUPPORT
+================================================================================
+
+GitHub Repository: https://github.com/mohith257/NPC-s-PW
+Developer: Mohith (mohith257)
+
+AlgoKit Support:
+- Discord: https://discord.gg/algorand
+- GitHub Issues: https://github.com/algorandfoundation/algokit-cli/issues
+
+Algorand Developer Support:
+- Forum: https://forum.algorand.org/
+- Discord: https://discord.gg/algorand
+
+
+FINAL NOTES
+================================================================================
+
+This project combines:
+✅ Blockchain (Algorand smart contracts)
+✅ Graph Theory (NetworkX algorithms)
+✅ Privacy-Preserving Cryptography (SHA-256 hashing)
+✅ Full-Stack Development (React + Python)
+✅ Real-World Problem Solving (AML compliance)
+
+The dual-dashboard approach demonstrates how competing banks can trustlessly
+share fraud intelligence without exposing sensitive customer data - a genuine
+innovation in the financial crime prevention space.
+
+By completing all phases, you will have:
+- Production-grade smart contract on TestNet
+- Functional dual-dashboard interface
+- Advanced graph analysis backend
+- Comprehensive documentation
+- Professional demo video
+- Strong hackathon submission
+
+Good luck! 🚀
+
+================================================================================
+END OF MAIN INSTRUCTIONS
+================================================================================
+
+NEXT STEP: Proceed to Phase 2 - Smart Contract Development
+FILE TO EDIT: projects/aml-registry-contracts/smart_contracts/aml_registry/contract.py
+WINDOW TO USE: aml-registry (Workspace)

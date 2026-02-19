@@ -1,0 +1,367 @@
+#pragma version 11
+#pragma typetrack false
+
+// algopy.arc4.ARC4Contract.approval_program() -> uint64:
+main:
+    intcblock 0 1 2 8
+    bytecblock 0x151f7c75
+    // smart_contracts/aml_registry/contract.py:14
+    // class AmlRegistry(ARC4Contract):
+    txn NumAppArgs
+    bz main___algopy_default_create@14
+    txn OnCompletion
+    !
+    assert
+    txn ApplicationID
+    assert
+    pushbytess 0x4b685ec2 0x54bdce30 0xd9e1f938 0xb91f63fd 0x41d37e43 0xc8858da0 0x02bece11 // method "register_wallet(byte[],uint64,uint64,uint64)string", method "update_risk_score(byte[],uint64)string", method "get_risk_profile(byte[])(uint64,uint64,uint64,uint64,uint64)", method "flag_wallet(byte[])string", method "is_wallet_flagged(byte[])uint64", method "get_risk_score(byte[])uint64", method "hello(string)string"
+    txna ApplicationArgs 0
+    match register_wallet update_risk_score get_risk_profile flag_wallet is_wallet_flagged get_risk_score hello
+    err
+
+main___algopy_default_create@14:
+    txn OnCompletion
+    !
+    txn ApplicationID
+    !
+    &&
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.register_wallet[routing]() -> void:
+register_wallet:
+    // smart_contracts/aml_registry/contract.py:21
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    txna ApplicationArgs 2
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    txna ApplicationArgs 3
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    txna ApplicationArgs 4
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // smart_contracts/aml_registry/contract.py:34-35
+    // # Validate risk score is in range
+    // assert risk_score <= 100, "Risk score must be between 0 and 100"
+    dig 2
+    pushint 100
+    <=
+    assert // Risk score must be between 0 and 100
+    // smart_contracts/aml_registry/contract.py:37-38
+    // # Create wallet risk profile
+    // is_flagged_value = UInt64(1) if risk_score >= 70 else UInt64(0)
+    dig 2
+    pushint 70
+    >=
+    // smart_contracts/aml_registry/contract.py:44
+    // last_updated=Global.latest_timestamp,
+    global LatestTimestamp
+    // smart_contracts/aml_registry/contract.py:40-46
+    // profile = WalletRiskProfile(
+    //     risk_score=risk_score,
+    //     transaction_count=transaction_count,
+    //     flagged_connections=flagged_connections,
+    //     last_updated=Global.latest_timestamp,
+    //     is_flagged=is_flagged_value,
+    // )
+    uncover 4
+    itob
+    uncover 4
+    itob
+    concat
+    uncover 3
+    itob
+    concat
+    swap
+    itob
+    concat
+    swap
+    itob
+    concat
+    // smart_contracts/aml_registry/contract.py:48-49
+    // # Store profile in box storage (key: hashed_id)
+    // op.Box.put(hashed_id, profile.bytes)
+    box_put
+    // smart_contracts/aml_registry/contract.py:21
+    // @abimethod
+    pushbytes 0x151f7c75001e57616c6c65742072656769737465726564207375636365737366756c6c79
+    log
+    intc_1 // 1
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.update_risk_score[routing]() -> void:
+update_risk_score:
+    // smart_contracts/aml_registry/contract.py:53
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    txna ApplicationArgs 2
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    dup
+    btoi
+    // smart_contracts/aml_registry/contract.py:62
+    // assert new_risk_score <= 100, "Risk score must be between 0 and 100"
+    dup
+    pushint 100
+    <=
+    assert // Risk score must be between 0 and 100
+    // smart_contracts/aml_registry/contract.py:64-65
+    // # Retrieve existing profile
+    // profile_bytes, _exists = op.Box.get(hashed_id)
+    dig 2
+    box_get
+    pop
+    // smart_contracts/aml_registry/contract.py:68-69
+    // # Update risk score and flag status
+    // profile.risk_score = new_risk_score
+    uncover 2
+    replace2 0
+    // smart_contracts/aml_registry/contract.py:70
+    // profile.is_flagged = UInt64(1) if new_risk_score >= 70 else UInt64(0)
+    swap
+    pushint 70
+    >=
+    itob
+    replace2 32
+    // smart_contracts/aml_registry/contract.py:71
+    // profile.last_updated = Global.latest_timestamp
+    global LatestTimestamp
+    itob
+    replace2 24
+    // smart_contracts/aml_registry/contract.py:73-74
+    // # Save updated profile
+    // op.Box.put(hashed_id, profile.bytes)
+    box_put
+    // smart_contracts/aml_registry/contract.py:53
+    // @abimethod
+    pushbytes 0x151f7c7500125269736b2073636f72652075706461746564
+    log
+    intc_1 // 1
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.get_risk_profile[routing]() -> void:
+get_risk_profile:
+    // smart_contracts/aml_registry/contract.py:78
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    // smart_contracts/aml_registry/contract.py:83
+    // profile_bytes, _exists = op.Box.get(hashed_id)
+    box_get
+    pop
+    // smart_contracts/aml_registry/contract.py:78
+    // @abimethod
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.flag_wallet[routing]() -> void:
+flag_wallet:
+    // smart_contracts/aml_registry/contract.py:86
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    dup
+    // smart_contracts/aml_registry/contract.py:91
+    // profile_bytes, _exists = op.Box.get(hashed_id)
+    box_get
+    pop
+    // smart_contracts/aml_registry/contract.py:94-95
+    // # Set flag to true
+    // profile.is_flagged = UInt64(1)
+    intc_1 // 1
+    itob
+    replace2 32
+    // smart_contracts/aml_registry/contract.py:96
+    // profile.last_updated = Global.latest_timestamp
+    global LatestTimestamp
+    itob
+    replace2 24
+    dup
+    // smart_contracts/aml_registry/contract.py:98-99
+    // # If not already high risk, set to 70 (flagged threshold)
+    // if profile.risk_score < 70:
+    intc_0 // 0
+    extract_uint64
+    pushint 70
+    <
+    bz flag_wallet_after_if_else@3
+    // smart_contracts/aml_registry/contract.py:100
+    // profile.risk_score = UInt64(70)
+    pushint 70
+    itob
+    replace2 0
+
+flag_wallet_after_if_else@3:
+    // smart_contracts/aml_registry/contract.py:102
+    // op.Box.put(hashed_id, profile.bytes)
+    dig 1
+    swap
+    box_put
+    // smart_contracts/aml_registry/contract.py:86
+    // @abimethod
+    pushbytes 0x151f7c75001d57616c6c657420666c616767656420666f7220414d4c20726576696577
+    log
+    intc_1 // 1
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.is_wallet_flagged[routing]() -> void:
+is_wallet_flagged:
+    // smart_contracts/aml_registry/contract.py:106
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    // smart_contracts/aml_registry/contract.py:112
+    // profile_bytes, _exists = op.Box.get(hashed_id)
+    box_get
+    pop
+    // smart_contracts/aml_registry/contract.py:114
+    // return profile.is_flagged
+    extract 32 8
+    // smart_contracts/aml_registry/contract.py:106
+    // @abimethod
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.get_risk_score[routing]() -> void:
+get_risk_score:
+    // smart_contracts/aml_registry/contract.py:116
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    // smart_contracts/aml_registry/contract.py:121
+    // profile_bytes, _exists = op.Box.get(hashed_id)
+    box_get
+    pop
+    // smart_contracts/aml_registry/contract.py:123
+    // return profile.risk_score
+    extract 0 8
+    // smart_contracts/aml_registry/contract.py:116
+    // @abimethod
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+
+// smart_contracts.aml_registry.contract.AmlRegistry.hello[routing]() -> void:
+hello:
+    // smart_contracts/aml_registry/contract.py:125
+    // @abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    // smart_contracts/aml_registry/contract.py:130
+    // return String("Hello, ") + name
+    pushbytes "Hello, "
+    swap
+    concat
+    // smart_contracts/aml_registry/contract.py:125
+    // @abimethod
+    dup
+    len
+    itob
+    extract 6 2
+    swap
+    concat
+    bytec_0 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return

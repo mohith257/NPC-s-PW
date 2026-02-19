@@ -1,0 +1,103 @@
+Product Requirements Document (PRD)
+Project Title: Decentralized Anti-Money Laundering (AML) Registry
+Track: Algorand Open Innovation Challenge
+Objective: Solve financial data silos by building a decentralized, cross-bank registry on the Algorand blockchain. This allows competing banks to trustlessly share fraud intelligence (money mules) using cryptographic hashing to preserve customer data privacy.
+
+1. Tech Stack & Architecture
+1.1 Frontend (The Face)
+Framework: React with TypeScript (via official algokit-react-frontend-template).
+
+Styling: Tailwind CSS & DaisyUI.
+
+Graph Visualization: React Flow (@xyflow/react) to render transaction nodes and edges.
+
+Hosting: Vercel.
+
+1.2 Backend API (The Brain)
+Framework: Python (FastAPI).
+
+Graph Math: NetworkX for cycle detection (Circular Routing) and smurfing detection.
+
+Cryptography: hashlib (SHA-256) for generating privacy-preserving Digital Fingerprints of user IDs.
+
+Hosting: Render or Railway.
+
+1.3 Smart Contract (The Ledger)
+Language: Native Algorand Python (PuyaPy) using AlgoKit.
+
+Network: Algorand Testnet.
+
+Function: A permanent, immutable global state registry storing mapped key-value pairs of Hashed_ID -> Risk_Score.
+
+2. Core Features & Workflows
+2.1 The "Dual-Window" Roleplay UI
+The frontend must feature a split-screen or two distinct tabs to simulate a real-world banking scenario:
+
+Bank A (Detection): Uploads a CSV of transactions. The Python API processes the CSV, finds the mule rings, and returns the graph data. The UI renders the React Flow graph. Bank A clicks "Flag to AML Registry", which hashes the ID and executes an Algorand Testnet transaction via AlgoKit use-wallet.
+
+Bank B (Enforcement): Simulates a new customer onboarding. Bank B types in a real-world ID number. The frontend hashes it, queries the Algorand smart contract's global state, and immediately blocks the application if the hash is found in the registry.
+
+2.2 Advanced Web3 Integrations
+Automated Asset Quarantine: Use Algorand Layer-1 Clawback features in the smart contract to automatically freeze/confiscate assets from wallets with a 99%+ money muling risk score.
+
+Zero-Knowledge Proofs (ZKPs): Document the architectural readiness for AlgoPlonk (Algorand ZK) to verify mule status mathematically without revealing the underlying hash.
+
+Visual Tracing: Ensure the local deployment uses AlgoKit 3.0 so the "Visual Debugger" can be showcased in the final demo video.
+
+3. Mandatory Bot Traps (Security Layer)
+To prevent automated botnets from scraping or draining the protocol, three specific traps must be implemented:
+
+Frontend Honeypot (The Invisible Box): A CSS-hidden input field (<input name="admin_override_code" className="absolute left-[-9999px] opacity-0" />). If this field is submitted with data, the React app must block the transaction (catching dumb scraper bots).
+
+Backend Speed Limit (The Stopwatch): The FastAPI backend must measure the time between UI render and form submission. Submissions under 400ms must be rejected as physically impossible for a human (catching headless browser bots).
+
+Smart Contract Honeypot (The Fake Vault): The Python smart contract must include a decoy ABI method called @app.external def withdraw_abandoned_yield(). If an automated script calls this, it receives no funds; instead, its Txn.sender is permanently appended to the AML registry with a 100% risk score.
+
+4. AI Implementation Plan (Step-by-Step)
+AI Assistant Instruction: Do not write the entire application at once. Wait for my prompt to proceed to the next phase. Execute the phases exactly in this order:
+
+Phase 1: Project Initialization
+
+Use the AlgoKit CLI to generate the monorepo workspace (algokit init -t fullstack).
+
+Set up the Python FastAPI backend folder inside the workspace.
+
+Install dependencies (networkx, fastapi, @xyflow/react).
+
+Phase 2: The Smart Contract (Algorand Python)
+
+Write the contract.py file.
+
+Implement the global state registry mapping bytes (hashed IDs) to uint64 (risk scores).
+
+Implement the @app.external def flag_mule() method.
+
+Implement the @app.external def withdraw_abandoned_yield() bot honeypot.
+
+Phase 3: The Python Backend (Data Science)
+
+Write the FastAPI endpoints.
+
+Implement the CSV parser.
+
+Implement the NetworkX logic to find cycles of length 3-5 (Circular Routing).
+
+Implement the SHA-256 hashing logic.
+
+Implement the 400ms speed-limit middleware.
+
+Phase 4: The React Frontend
+
+Build the Dual-Window UI (Bank A vs Bank B).
+
+Implement the CSV upload form with the CSS honeypot.
+
+Map the FastAPI output to React Flow nodes and edges. Visually highlight the detected muling rings in red.
+
+Integrate use-wallet to sign the Testnet transactions.
+
+Phase 5: Deployment
+
+Deploy the smart contract via algokit project deploy testnet.
+
+Prep the frontend for Vercel deployment.

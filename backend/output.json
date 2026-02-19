@@ -1,0 +1,73 @@
+{
+  "suspicious_accounts": [
+    {
+      "account_id": "ACC_RING_1",
+      "suspicion_score": 75.0,
+      "detected_patterns": [
+        "cycle_length_4",
+        "layered_network",
+        "layered_network",
+        "layered_network",
+        "layered_network"
+      ],
+      "ring_id": "RING_001"
+    },
+    {
+      "account_id": "ACC_RING_3",
+      "suspicion_score": 75.0,
+      "detected_patterns": [
+        "cycle_length_4",
+        "layered_network",
+        "layered_network",
+        "layered_network",
+        "layered_network"
+      ],
+      "ring_id": "RING_001"
+    },
+    {
+      "account_id": "ACC_RING_2",
+      "suspicion_score": 75.0,
+      "detected_patterns": [
+        "cycle_length_4",
+        "layered_network",
+        "layered_network",
+        "layered_network",
+        "layered_network"
+      ],
+      "ring_id": "RING_001"
+    },
+    {
+      "account_id": "ACC_RING_4",
+      "suspicion_score": 75.0,
+      "detected_patterns": [
+        "cycle_length_4",
+        "layered_network",
+        "layered_network",
+        "layered_network",
+        "layered_network"
+      ],
+      "ring_id": "RING_001"
+    }
+  ],
+  "fraud_rings": [
+    {
+      "ring_id": "RING_001",
+      "member_accounts": [
+        "ACC_RING_1",
+        "ACC_RING_2",
+        "ACC_RING_3",
+        "ACC_RING_4"
+      ],
+      "pattern_type": "cycle",
+      "ring_size": 4,
+      "risk_score": 75.0
+    }
+  ],
+  "summary": {
+    "total_accounts_analyzed": 31,
+    "suspicious_accounts_flagged": 4,
+    "fraud_rings_detected": 1,
+    "processing_time_seconds": 1.03
+  },
+  "visualizations": null
+}
