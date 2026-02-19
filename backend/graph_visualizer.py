@@ -84,7 +84,9 @@ def visualize_fraud_rings(G: nx.DiGraph, rings: List[Dict], output_path: str = "
     # Collect all accounts involved in fraud rings
     fraud_accounts = set()
     for ring in rings:
-        fraud_accounts.update(ring['accounts'])
+        # Support both 'accounts' and 'member_accounts' field names
+        accounts_list = ring.get('member_accounts') or ring.get('accounts', [])
+        fraud_accounts.update(accounts_list)
     
     # Create subgraph with fraud accounts
     if fraud_accounts:
@@ -99,9 +101,14 @@ def visualize_fraud_rings(G: nx.DiGraph, rings: List[Dict], output_path: str = "
     
     # Draw each ring separately with different colors
     for idx, ring in enumerate(rings):
-        ring_nodes = [n for n in ring['accounts'] if n in fraud_subgraph.nodes()]
+        # Support both 'accounts' and 'member_accounts' field names
+        accounts_list = ring.get('member_accounts') or ring.get('accounts', [])
+        ring_nodes = [n for n in accounts_list if n in fraud_subgraph.nodes()]
         if ring_nodes:
             color = colors[idx % len(colors)]
+            
+            # Get pattern (support both 'pattern' and 'pattern_type')
+            pattern = ring.get('pattern_type') or ring.get('pattern', 'unknown')
             
             # Draw ring nodes
             nx.draw_networkx_nodes(
@@ -110,7 +117,7 @@ def visualize_fraud_rings(G: nx.DiGraph, rings: List[Dict], output_path: str = "
                 node_color=color,
                 node_size=800,
                 alpha=0.9,
-                label=f"{ring['ring_id']}: {ring['pattern']} ({len(ring_nodes)} accounts)"
+                label=f"{ring['ring_id']}: {pattern} ({len(ring_nodes)} accounts)"
             )
     
     # Draw edges
@@ -172,24 +179,24 @@ def visualize_suspicious_accounts(G: nx.DiGraph, suspicious: List[Dict], output_
     
     # Get suspicious account IDs
     suspicious_ids = {acc['account_id'] for acc in suspicious}
-    
+
     # Create subgraph with suspicious accounts and their neighbors
     ego_graphs = []
     for acc_id in suspicious_ids:
         if acc_id in G:
             ego_graphs.append(nx.ego_graph(G, acc_id, radius=1))
-    
+
     if ego_graphs:
         subgraph = nx.compose_all(ego_graphs)
     else:
         subgraph = G.subgraph(suspicious_ids)
-    
+
     pos = nx.spring_layout(subgraph, k=2, iterations=50, seed=42)
-    
+
     # Separate suspicious vs. connected accounts
     suspicious_nodes = [n for n in subgraph.nodes() if n in suspicious_ids]
     connected_nodes = [n for n in subgraph.nodes() if n not in suspicious_ids]
-    
+
     # Draw connected accounts (gray)
     if connected_nodes:
         nx.draw_networkx_nodes(
@@ -199,13 +206,18 @@ def visualize_suspicious_accounts(G: nx.DiGraph, suspicious: List[Dict], output_
             node_size=400,
             alpha=0.6
         )
-    
-    # Draw suspicious accounts (red) with size based on risk score
+
+    # Draw suspicious accounts (red) with size based on risk/suspicion score
     if suspicious_nodes:
-        # Create risk score mapping
-        risk_map = {acc['account_id']: acc['risk_score'] for acc in suspicious}
+        # Create risk score mapping (support both 'risk_score' and 'suspicion_score')
+        risk_map = {}
+        for acc in suspicious:
+            score = acc.get('risk_score')
+            if score is None:
+                score = acc.get('suspicion_score', 50)
+            risk_map[acc['account_id']] = score
         node_sizes = [risk_map.get(n, 50) * 10 + 500 for n in suspicious_nodes]
-        
+
         nx.draw_networkx_nodes(
             subgraph, pos,
             nodelist=suspicious_nodes,
@@ -213,7 +225,7 @@ def visualize_suspicious_accounts(G: nx.DiGraph, suspicious: List[Dict], output_
             node_size=node_sizes,
             alpha=0.9
         )
-    
+
     # Draw edges
     nx.draw_networkx_edges(
         subgraph, pos,
@@ -223,24 +235,24 @@ def visualize_suspicious_accounts(G: nx.DiGraph, suspicious: List[Dict], output_
         alpha=0.5,
         width=2
     )
-    
+
     # Draw labels
     nx.draw_networkx_labels(
         subgraph, pos,
         font_size=9,
         font_weight='bold'
     )
-    
+
     plt.title(f"Suspicious Accounts Network\n{len(suspicious_ids)} Flagged Accounts",
               fontsize=16, fontweight='bold')
     plt.axis('off')
     plt.tight_layout()
-    
+
     # Save to file
     output_file = Path(output_path)
     plt.savefig(output_file, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
-    
+
     return str(output_file)
 
 

@@ -1,7 +1,7 @@
 {
   "suspicious_accounts": [
     {
-      "account_id": "ACC_RING_4",
+      "account_id": "ACC_RING_2",
       "suspicion_score": 75.0,
       "detected_patterns": [
         "cycle_length_4",
@@ -13,7 +13,7 @@
       "ring_id": "RING_001"
     },
     {
-      "account_id": "ACC_RING_1",
+      "account_id": "ACC_RING_4",
       "suspicion_score": 75.0,
       "detected_patterns": [
         "cycle_length_4",
@@ -37,7 +37,7 @@
       "ring_id": "RING_001"
     },
     {
-      "account_id": "ACC_RING_2",
+      "account_id": "ACC_RING_1",
       "suspicion_score": 75.0,
       "detected_patterns": [
         "cycle_length_4",
@@ -53,10 +53,10 @@
     {
       "ring_id": "RING_001",
       "member_accounts": [
+        "ACC_RING_3",
         "ACC_RING_4",
         "ACC_RING_1",
-        "ACC_RING_2",
-        "ACC_RING_3"
+        "ACC_RING_2"
       ],
       "pattern_type": "cycle",
       "ring_size": 4,
@@ -67,11 +67,6 @@
     "total_accounts_analyzed": 31,
     "suspicious_accounts_flagged": 4,
     "fraud_rings_detected": 1,
-    "processing_time_seconds": 0.98
-  },
-  "visualizations": {
-    "full_graph": "graph_full.png",
-    "fraud_rings": "graph_fraud_rings.png",
-    "suspicious_accounts": "graph_suspicious.png"
+    "processing_time_seconds": 1.0
   }
 }

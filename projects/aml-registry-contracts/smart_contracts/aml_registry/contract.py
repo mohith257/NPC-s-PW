@@ -3,19 +3,20 @@ from algopy.arc4 import abimethod, Struct
 
 
 class WalletRiskProfile(Struct):
-    """Risk profile for a wallet address stored on-chain"""
+    """Risk profile for a wallet address stored on-chain with IPFS reference"""
     risk_score: UInt64  # 0-100 scale
     transaction_count: UInt64
     flagged_connections: UInt64
     last_updated: UInt64  # Timestamp
     is_flagged: UInt64  # 0 = false, 1 = true (using UInt64 for storage)
+    ipfs_hash_length: UInt64  # Length of IPFS hash stored separately
 
 
 class AmlRegistry(ARC4Contract):
     """
     Anti-Money Laundering Registry Smart Contract
-    Stores wallet risk profiles and AML flags on Algorand blockchain
-    Privacy-preserving: Uses SHA-256 hashed IDs instead of raw wallet addresses
+    Stores minimal flags on-chain with IPFS references to detailed data
+    Privacy-preserving: Uses SHA-256 hashed IDs + stores detailed data on IPFS
     """
 
     @abimethod
@@ -25,11 +26,20 @@ class AmlRegistry(ARC4Contract):
         risk_score: UInt64,
         transaction_count: UInt64,
         flagged_connections: UInt64,
+        ipfs_hash: String,
     ) -> String:
         """
-        Register a new wallet with its risk profile
-        hashed_id: SHA-256 hash of the wallet/account ID
-        risk_score: 0-100 risk score
+        Register a new wallet with its risk profile and IPFS pointer
+        
+        Args:
+            hashed_id: SHA-256 hash of the account ID (or salted PAN)
+            risk_score: 0-100 risk score
+            transaction_count: Number of transactions
+            flagged_connections: Number of flagged connections
+            ipfs_hash: IPFS hash (CID) pointing to detailed mule data
+        
+        Blockchain stores: minimal flag + IPFS pointer (Soul Bound - immutable)
+        IPFS stores: detailed transaction history, graph data, full analysis
         """
         # Validate risk score is in range
         assert risk_score <= 100, "Risk score must be between 0 and 100"
@@ -43,12 +53,17 @@ class AmlRegistry(ARC4Contract):
             flagged_connections=flagged_connections,
             last_updated=Global.latest_timestamp,
             is_flagged=is_flagged_value,
+            ipfs_hash_length=ipfs_hash.bytes.length,
         )
         
         # Store profile in box storage (key: hashed_id)
         op.Box.put(hashed_id, profile.bytes)
         
-        return String("Wallet registered successfully")
+        # Store IPFS hash in a separate box (key: hashed_id + "_ipfs")
+        ipfs_key = op.concat(hashed_id, Bytes(b"_ipfs"))
+        op.Box.put(ipfs_key, ipfs_hash.bytes)
+        
+        return String("Wallet flagged - Soul Bound Token created with IPFS reference")
 
     @abimethod
     def update_risk_score(
@@ -82,6 +97,18 @@ class AmlRegistry(ARC4Contract):
         """
         profile_bytes, _exists = op.Box.get(hashed_id)
         return WalletRiskProfile.from_bytes(profile_bytes)
+    
+    @abimethod
+    def get_ipfs_hash(self, hashed_id: Bytes) -> String:
+        """
+        Retrieve IPFS hash (CID) for detailed mule data
+        
+        Returns the IPFS hash where full transaction history and analysis are stored
+        Frontend can fetch this to display graph visualizations
+        """
+        ipfs_key = op.concat(hashed_id, Bytes(b"_ipfs"))
+        ipfs_hash_bytes, _exists = op.Box.get(ipfs_key)
+        return String.from_bytes(ipfs_hash_bytes)
 
     @abimethod
     def flag_wallet(self, hashed_id: Bytes) -> String:
