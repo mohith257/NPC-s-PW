@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import hashlib
 import json
+import time
 from pathlib import Path
 from graph_analyzer import analyze_transactions
 from typing import Optional
@@ -45,6 +46,7 @@ ALGOD_SERVER = os.getenv("ALGOD_SERVER", "http://localhost:4001")
 ALGOD_TOKEN = os.getenv("ALGOD_TOKEN", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 APP_ID = int(os.getenv("APP_ID", "1002"))
 CREATOR_MNEMONIC = os.getenv("CREATOR_MNEMONIC", "")
+NETWORK = os.getenv("NETWORK", "localnet")
 
 # Helper: get algod client
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_SERVER)
@@ -76,14 +78,15 @@ def get_localnet_default_account():
         print(f"Warning: Could not access LocalNet KMD: {e}")
         return None, None
 
-# Get sender account (try KMD first, then mnemonic)
+# Get sender account (try KMD first for localnet, then mnemonic)
 sender_sk = None
 sender_addr = None
 
-# Try LocalNet KMD first
-sender_sk, sender_addr = get_localnet_default_account()
+# Only try KMD on localnet
+if NETWORK == "localnet":
+    sender_sk, sender_addr = get_localnet_default_account()
 
-# Fallback to mnemonic if KMD fails
+# Fallback to mnemonic (required for testnet/mainnet)
 if not sender_sk and CREATOR_MNEMONIC:
     try:
         sender_sk = mnemonic.to_private_key(CREATOR_MNEMONIC)
@@ -133,8 +136,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # Vite dev server
+        "http://localhost:5174",  # Vite dev server (alternate port)
         "http://localhost:3000",  # Alternative React port
         "https://*.vercel.app",   # Vercel deployment
+        "*"  # Allow all for development
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -155,6 +160,11 @@ class KYCRequest(BaseModel):
     customer_name: Optional[str] = None
 
 
+class PANVerificationRequest(BaseModel):
+    """Request model for PAN blacklist verification"""
+    pan_number: str
+
+
 class FlagRequest(BaseModel):
     """Request model for flagging accounts to blockchain"""
     hashed_id: str
@@ -162,6 +172,10 @@ class FlagRequest(BaseModel):
     transaction_count: int
     flagged_connections: int
     ipfs_hash: Optional[str] = None
+
+
+# Global variable to store PAN mapping IPFS CID (permanent, stored in IPFS)
+pan_mapping_ipfs_cid = "QmdSjyrrBLvdH4Gjda1wMrk9sGrLowGBEbP5VnxuNZkydN"
 
 
 @app.get("/")
@@ -298,6 +312,185 @@ async def kyc_verify(request: KYCRequest):
         "note": "Store salt securely off-chain! You need it to re-verify this PAN later.",
         "customer_name": request.customer_name
     }
+
+
+@app.post("/upload-pan-mapping")
+async def upload_pan_mapping(file: UploadFile = File(...)):
+    """
+    [OPTIONAL] Upload Account-PAN Mapping CSV to IPFS (Off-Chain Storage)
+    
+    NOTE: CSV 2 is already permanently stored in IPFS at CID: QmdSjyrrBLvdH4Gjda1wMrk9sGrLowGBEbP5VnxuNZkydN
+    This endpoint is only needed if you want to update the mapping.
+    
+    CSV 2: Contains sensitive mapping between account numbers and PAN cards
+    Format: sender_id,pan_card
+    
+    This data is stored OFF-CHAIN on IPFS for privacy.
+    The IPFS CID is returned and used later for KYC verification.
+    
+    Args:
+        file: CSV file with columns: sender_id, pan_card
+    
+    Returns:
+        ipfs_cid: Content Identifier for retrieving the data from IPFS
+    """
+    global pan_mapping_ipfs_cid
+    
+    if not IPFS_AVAILABLE or not ipfs_client:
+        raise HTTPException(
+            status_code=503,
+            detail="IPFS not available. Please start IPFS daemon: ipfs daemon"
+        )
+    
+    try:
+        # Read CSV content
+        contents = await file.read()
+        
+        # Parse CSV to validate format
+        import io
+        import pandas as pd
+        df = pd.read_csv(io.BytesIO(contents))
+        
+        # Validate columns
+        required_columns = {'sender_id', 'pan_card'}
+        if not required_columns.issubset(df.columns):
+            raise HTTPException(
+                status_code=400,
+                detail=f"CSV must contain columns: {required_columns}. Found: {set(df.columns)}"
+            )
+        
+        # Convert to JSON for IPFS storage
+        pan_mapping_data = {
+            "mapping": df.to_dict('records'),
+            "uploaded_at": pd.Timestamp.now().isoformat(),
+            "total_records": len(df)
+        }
+        
+        # Upload to IPFS
+        result = ipfs_client.add_json(pan_mapping_data)
+        ipfs_cid = result
+        
+        # Store CID globally for later use
+        pan_mapping_ipfs_cid = ipfs_cid
+        
+        print(f"✅ Uploaded PAN mapping to IPFS: {ipfs_cid}")
+        
+        return {
+            "status": "success",
+            "message": "PAN mapping uploaded to IPFS (off-chain storage)",
+            "ipfs_cid": ipfs_cid,
+            "total_records": len(df),
+            "note": "This CID is now stored in memory. Use /verify-pan-blacklist to check PANs."
+        }
+        
+    except Exception as e:
+        import traceback
+        print(f"PAN mapping upload failed: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@app.post("/verify-pan-blacklist")
+async def verify_pan_blacklist(request: PANVerificationRequest):
+    """
+    Verify if a PAN is Blacklisted (Soul Bound Token Check)
+    
+    Flow:
+    1. Fetch PAN mapping from IPFS (CSV 2)
+    2. Find account_no associated with this PAN
+    3. Check if that account is Soul Bound (flagged as mule)
+    4. Return REJECT or ALLOW decision
+    
+    This is the KYC verification endpoint for frontend!
+    
+    Args:
+        pan_number: PAN to verify (e.g., ABCDE1234F)
+    
+    Returns:
+        blacklisted: true/false
+        reason: Why the PAN is flagged (if applicable)
+        sender_id: The associated account (if found)
+    """
+    global pan_mapping_ipfs_cid
+    
+    # CSV 2 is permanently stored in IPFS at the hardcoded CID
+    if not IPFS_AVAILABLE or not ipfs_client:
+        raise HTTPException(
+            status_code=503,
+            detail="IPFS not available. Cannot fetch PAN mapping."
+        )
+    
+    if not last_analysis_result:
+        raise HTTPException(
+            status_code=404,
+            detail="No fraud analysis performed yet. Upload CSV 1 and analyze first."
+        )
+    
+    try:
+        # Fetch PAN mapping from IPFS
+        pan_mapping_data = ipfs_client.get_json(pan_mapping_ipfs_cid)
+        mapping_records = pan_mapping_data.get("mapping", [])
+        
+        # Find account associated with this PAN
+        sender_id = None
+        for record in mapping_records:
+            if record.get("pan_card") == request.pan_number:
+                sender_id = record.get("sender_id")
+                break
+        
+        # PAN not found in mapping
+        if not sender_id:
+            return {
+                "status": "success",
+                "blacklisted": False,
+                "decision": "ALLOW ✅",
+                "message": "PAN not found in database - New customer",
+                "pan_number": request.pan_number
+            }
+        
+        # Check if this account is flagged (Soul Bound)
+        suspicious_accounts = last_analysis_result.get("suspicious_accounts", [])
+        
+        is_flagged = False
+        risk_score = 0
+        patterns = []
+        
+        for acc in suspicious_accounts:
+            if acc.get("account_id") == sender_id:
+                is_flagged = True
+                risk_score = acc.get("suspicion_score", 0)
+                patterns = acc.get("detected_patterns", [])
+                break
+        
+        if is_flagged:
+            return {
+                "status": "success",
+                "blacklisted": True,
+                "decision": "REJECT ❌",
+                "message": "⚠️ PAN BLACKLISTED - Associated with flagged mule account",
+                "pan_number": request.pan_number,
+                "sender_id": sender_id,
+                "risk_score": risk_score,
+                "detected_patterns": patterns,
+                "soul_bound": True,
+                "recommendation": "DO NOT onboard this customer - Previous AML violations"
+            }
+        else:
+            return {
+                "status": "success",
+                "blacklisted": False,
+                "decision": "ALLOW ✅",
+                "message": "PAN found but account is clean - Safe to proceed",
+                "pan_number": request.pan_number,
+                "sender_id": sender_id,
+                "risk_score": 0,
+                "soul_bound": False
+            }
+        
+    except Exception as e:
+        import traceback
+        print(f"PAN verification failed: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
 
 
 @app.post("/flag-to-blockchain")
@@ -713,8 +906,268 @@ async def get_graph_statistics():
     return stats
 
 
+# ==================== FRONTEND-COMPATIBLE ENDPOINTS ====================
+
+@app.post("/detect")
+async def detect_mules(file: UploadFile = File(...)):
+    """
+    Frontend-compatible endpoint for detecting money mules
+    Alias to /analyze but returns data in frontend-expected format
+    """
+    global last_analysis_result, last_graph
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    
+    try:
+        contents = await file.read()
+        results, graph = analyze_transactions(contents)
+        
+        # Save to global variables
+        last_analysis_result = results
+        last_graph = graph
+        
+        suspicious_accounts = results.get("suspicious_accounts", [])
+        
+        # Transform data for frontend - match MuleNode interface
+        mules = []
+        for acc in suspicious_accounts:
+            mules.append({
+                "id": acc.get("account_id"),
+                "name": acc.get("account_id"),  # Use account_id as name
+                "riskScore": acc.get("suspicion_score", 0),
+                "type": "mule",
+                "flaggedPatterns": acc.get("detected_patterns", []),
+                "linkedAccounts": acc.get("flagged_connections", 0)
+            })
+        
+        # Build graph data for frontend - ONE UNIFIED GRAPH
+        graph_nodes = []
+        graph_links = []
+        
+        # Get fraud rings for edge coloring
+        fraud_rings = results.get("fraud_rings", [])
+        ring_accounts = set()
+        for ring in fraud_rings:
+            ring_accounts.update(ring.get("accounts", []))
+        
+        # Add ALL nodes from the transaction graph
+        for node in graph.nodes():
+            is_mule = any(acc.get("account_id") == node for acc in suspicious_accounts)
+            is_in_ring = node in ring_accounts
+            risk_score = next((acc.get("suspicion_score", 0) for acc in suspicious_accounts if acc.get("account_id") == node), 0)
+            patterns = next((acc.get("detected_patterns", []) for acc in suspicious_accounts if acc.get("account_id") == node), [])
+            
+            # Determine node type based on patterns
+            node_type = "normal"
+            if is_mule:
+                if is_in_ring:
+                    node_type = "ring"  # Part of fraud ring
+                else:
+                    node_type = "mule"  # General mule
+            
+            graph_nodes.append({
+                "id": node,
+                "name": node,
+                "riskScore": risk_score if is_mule else 0,
+                "type": node_type,
+                "flaggedPatterns": patterns if is_mule else [],
+                "inFraudRing": is_in_ring
+            })
+        
+        # Add edges with ring detection
+        for source, target in graph.edges():
+            source_in_ring = source in ring_accounts
+            target_in_ring = target in ring_accounts
+            is_ring_connection = source_in_ring and target_in_ring
+            
+            graph_links.append({
+                "source": source,
+                "target": target,
+                "isRingConnection": is_ring_connection
+            })
+        
+        # Calculate average risk score
+        avg_risk = sum(m["riskScore"] for m in mules) / len(mules) if mules else 0
+        
+        # Count cycles/rings
+        detected_cycles = len(results.get("fraud_rings", []))
+        
+        response_data = {
+            "mules": mules,
+            "graph": {
+                "nodes": graph_nodes,
+                "links": graph_links
+            },
+            "summary": {
+                "totalTransactions": results.get("summary", {}).get("total_transactions", 0),
+                "flaggedAccounts": len(mules),
+                "averageRiskScore": round(avg_risk, 1),
+                "detectedCycles": detected_cycles
+            },
+            # Include original detailed analysis for download
+            "detailedAnalysis": {
+                "suspicious_accounts": results.get("suspicious_accounts", []),
+                "fraud_rings": results.get("fraud_rings", []),
+                "analysis_summary": results.get("summary", {}),
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "ipfs_integration": {
+                    "pan_mapping_cid": pan_mapping_ipfs_cid,
+                    "status": "active" if IPFS_AVAILABLE else "unavailable"
+                }
+            }
+        }
+        
+        # AUTO-FLAG: Register each detected mule as Soul Bound Token on blockchain
+        blockchain_results = []
+        if contract and sender_sk and mules:
+            print(f"\n🔗 Auto-flagging {len(mules)} mules to Algorand blockchain...")
+            for mule in mules:
+                try:
+                    account_id = mule["id"]
+                    hashed_id_bytes = hashlib.sha256(account_id.encode()).digest()
+                    risk_score = int(mule["riskScore"])
+                    
+                    atc = AtomicTransactionComposer()
+                    method: Method = contract.get_method_by_name("register_wallet")
+                    signer = AccountTransactionSigner(sender_sk)
+                    
+                    sp = algod_client.suggested_params()
+                    ipfs_hash = pan_mapping_ipfs_cid if pan_mapping_ipfs_cid else ""
+                    profile_box_size = 48
+                    ipfs_box_size = 32 + len(ipfs_hash)
+                    sp.fee = 1000 + (2500 + 400 * profile_box_size) + (2500 + 400 * ipfs_box_size)
+                    sp.flat_fee = True
+                    
+                    ipfs_key_bytes = hashed_id_bytes + b"_ipfs"
+                    
+                    atc.add_method_call(
+                        app_id=APP_ID,
+                        method=method,
+                        sender=sender_addr,
+                        sp=sp,
+                        signer=signer,
+                        method_args=[
+                            hashed_id_bytes,
+                            risk_score,
+                            1,  # transaction_count
+                            mule.get("linkedAccounts", 0),
+                            ipfs_hash
+                        ],
+                        boxes=[(APP_ID, hashed_id_bytes), (APP_ID, ipfs_key_bytes)]
+                    )
+                    result = atc.execute(algod_client, 2)
+                    txid = result.tx_ids[0]
+                    blockchain_results.append({
+                        "account": account_id,
+                        "txid": txid,
+                        "status": "flagged"
+                    })
+                    print(f"  ✅ {account_id} flagged on-chain (txid: {txid[:12]}...)")
+                except Exception as e:
+                    print(f"  ⚠️ Failed to flag {mule['id']}: {str(e)}")
+                    blockchain_results.append({
+                        "account": mule["id"],
+                        "status": "failed",
+                        "error": str(e)
+                    })
+            print(f"🔗 Blockchain flagging complete: {len([b for b in blockchain_results if b['status'] == 'flagged'])}/{len(mules)} succeeded\n")
+        
+        # Add blockchain results to response
+        response_data["blockchainFlags"] = blockchain_results
+        
+        return response_data
+    except Exception as e:
+        import traceback
+        print(f"Detection failed: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post("/verify-pan")
+async def verify_pan(request: dict):
+    """
+    Frontend-compatible PAN verification endpoint
+    
+    Request body: { "pan": "ABCDE1234F" }
+    Returns: { panHash, saltRounds, ipfsFound, soulBound, canCreateAccount, riskScore, timestamp }
+    """
+    global pan_mapping_ipfs_cid, last_analysis_result
+    
+    pan_number = request.get("pan", "").strip().upper()
+    
+    if not pan_number:
+        raise HTTPException(status_code=400, detail="PAN number is required")
+    
+    # Generate hash for PAN
+    import time
+    pan_hash = hashlib.sha256(pan_number.encode()).hexdigest()
+    
+    # Default response
+    response = {
+        "panHash": pan_hash,
+        "saltRounds": 10,
+        "ipfsFound": False,
+        "soulBound": False,
+        "canCreateAccount": True,
+        "riskScore": 0,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "sender_id": None
+    }
+    
+    # Check if IPFS is available and PAN mapping exists
+    if not IPFS_AVAILABLE or not ipfs_client:
+        return response
+    
+    if not pan_mapping_ipfs_cid:
+        return response
+    
+    if not last_analysis_result:
+        return response
+    
+    try:
+        # Fetch PAN mapping from IPFS
+        pan_mapping_data = ipfs_client.get_json(pan_mapping_ipfs_cid)
+        mapping_records = pan_mapping_data.get("mapping", [])
+        
+        response["ipfsFound"] = True
+        
+        # Find sender_id associated with this PAN
+        sender_id = None
+        for record in mapping_records:
+            if record.get("pan_card") == pan_number:
+                sender_id = record.get("sender_id")
+                break
+        
+        # PAN not found in mapping
+        if not sender_id:
+            return response
+        
+        response["sender_id"] = sender_id
+        
+        # Check if this account is flagged (Soul Bound)
+        suspicious_accounts = last_analysis_result.get("suspicious_accounts", [])
+        
+        for acc in suspicious_accounts:
+            if acc.get("account_id") == sender_id:
+                response["soulBound"] = True
+                response["canCreateAccount"] = False
+                response["riskScore"] = acc.get("suspicion_score", 100)
+                response["detected_patterns"] = acc.get("detected_patterns", [])
+                response["message"] = "⚠️ PAN BLACKLISTED - Associated with flagged mule account"
+                break
+        
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"PAN verification failed: {traceback.format_exc()}")
+        # Return default response on error
+        return response
+
+
 # ==================== SOUL BOUND TOKEN (SBT) ENDPOINTS ====================
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=os.getenv("NETWORK", "localnet") == "localnet")

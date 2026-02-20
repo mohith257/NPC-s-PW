@@ -219,16 +219,20 @@ function App() {
                       {graphData.nodes.length > 0 && (
                         <div className="absolute bottom-3 left-3 z-10 flex items-center gap-4 bg-algo-dark/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-algo-border/30">
                           <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full bg-algo-red shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                            <span className="text-[10px] text-gray-400">High Risk (&gt;80)</span>
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                            <span className="text-[10px] text-gray-400">Mule</span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full bg-algo-amber shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                            <span className="text-[10px] text-gray-400">Medium (50-80)</span>
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                            <span className="text-[10px] text-gray-400">Fraud Ring</span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full bg-algo-teal shadow-[0_0_8px_rgba(0,229,255,0.5)]" />
-                            <span className="text-[10px] text-gray-400">Low (&lt;50)</span>
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                            <span className="text-[10px] text-gray-400">Normal</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-1 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]" />
+                            <span className="text-[10px] text-gray-400">Ring Link</span>
                           </div>
                         </div>
                       )}

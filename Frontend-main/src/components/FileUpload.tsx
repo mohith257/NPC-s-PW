@@ -38,24 +38,33 @@ export default function FileUpload({ onUploadComplete, isLoading, setIsLoading, 
     setError(null);
     setFileName(file.name);
     setIsLoading(true);
+    setError(null);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/detect', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      console.log('Uploading to backend:', `${API_URL}/detect`);
+      const response = await fetch(`${API_URL}/detect`, {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Backend response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+        const errorText = await response.text();
+        console.error('Backend error response:', errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Backend data received:', data);
       onUploadComplete(data);
     } catch (err: any) {
       console.error('Upload failed:', err);
+      setError(`Backend connection failed: ${err.message}. Using mock data for demo.`);
       // If backend is unreachable, generate mock data for demo
       const mockData = generateMockData();
       onUploadComplete(mockData);

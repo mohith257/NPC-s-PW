@@ -566,6 +566,7 @@ def transform_to_required_format(
     # Build summary object
     summary = {
         "total_accounts_analyzed": total_accounts,
+        "total_transactions": total_transactions,
         "suspicious_accounts_flagged": len(suspicious_accounts),
         "fraud_rings_detected": len(fraud_rings),
         "processing_time_seconds": processing_time

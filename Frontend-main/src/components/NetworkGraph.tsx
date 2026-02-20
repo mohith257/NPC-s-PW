@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { forceManyBody, forceCollide, forceX, forceY } from 'd3-force';
 import type { GraphData, MuleNode } from '../types';
 
 interface NetworkGraphProps {
@@ -11,30 +12,79 @@ interface NetworkGraphProps {
 
 export default function NetworkGraph({ graphData, onNodeClick, width, height }: NetworkGraphProps) {
   const graphRef = useRef<any>(null);
-
+  
   // Stabilize graph data to avoid triggering re-renders
-  const data = useMemo(() => ({
-    nodes: graphData.nodes.map(n => ({ ...n })),
-    links: graphData.links.map(l => ({ ...l })),
-  }), [graphData]);
+  const data = useMemo(() => {
+    // Debug: log node types
+    console.log('Graph nodes:', graphData.nodes.map(n => ({ id: n.id, type: n.type, risk: n.riskScore })));
+    return {
+      nodes: graphData.nodes.map(n => ({ ...n })),
+      links: graphData.links.map(l => ({ ...l })),
+    };
+  }, [graphData]);
+  
+  // Force complete remount by creating unique key from actual data
+  const graphKey = useMemo(() => {
+    const hash = graphData.nodes.map(n => `${n.id}:${n.type}`).sort().join('|');
+    return hash;
+  }, [graphData]);
 
+  // Configure D3 forces to merge disconnected components into one visual cluster
   useEffect(() => {
     if (graphRef.current) {
-      graphRef.current.d3Force('charge')?.strength(-300);
-      graphRef.current.d3Force('link')?.distance(80);
+      const fg = graphRef.current;
+      
+      // forceX/forceY pull EVERY node toward center — critical for merging disconnected groups
+      fg.d3Force('x', forceX(width / 2).strength(0.15));
+      fg.d3Force('y', forceY(height / 2).strength(0.15));
+      
+      // Gentle repulsion so nodes don't stack on top of each other
+      fg.d3Force('charge', forceManyBody().strength(-80));
+      
+      // Collision detection to prevent label overlap
+      fg.d3Force('collide', forceCollide(30));
+      
+      // Tighten link distance for connected nodes
+      fg.d3Force('link')?.distance(40).strength(1.5);
+      
+      // Remove default center force (forceX/Y replaces it)
+      fg.d3Force('center', null);
+      
+      // Reheat simulation to apply new forces
+      fg.d3ReheatSimulation();
+    }
+  }, [graphKey, width, height]);
+
+  // Reheat on data change
+  useEffect(() => {
+    if (graphRef.current) {
+      graphRef.current.d3ReheatSimulation();
     }
   }, [data]);
 
   const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.name || node.id;
     const fontSize = 11 / globalScale;
-    const isHighRisk = node.riskScore > 80;
-    const isMediumRisk = node.riskScore > 50;
-    const nodeRadius = isHighRisk ? 8 : isMediumRisk ? 6 : 5;
-
-    // Determine colors
-    const fillColor = isHighRisk ? '#ef4444' : isMediumRisk ? '#f59e0b' : '#00E5FF';
-    const glowColor = isHighRisk ? '#ef4444' : isMediumRisk ? '#f59e0b' : '#00E5FF';
+    
+    // Determine node type and colors
+    const isMule = node.type === 'mule';
+    const isRing = node.type === 'ring';
+    const isNormal = node.type === 'normal';
+    
+    const nodeRadius = (isMule || isRing) ? 8 : 5;
+    
+    // Color scheme: Mules (red), Rings (orange), Normal (blue)
+    let fillColor, glowColor;
+    if (isRing) {
+      fillColor = '#f59e0b';  // Orange for fraud rings
+      glowColor = '#f59e0b';
+    } else if (isMule) {
+      fillColor = '#ef4444';  // Red for general mules
+      glowColor = '#ef4444';
+    } else {
+      fillColor = '#3b82f6';  // Blue for normal users
+      glowColor = '#3b82f6';
+    }
 
     // Outer glow ring
     ctx.beginPath();
@@ -43,7 +93,7 @@ export default function NetworkGraph({ graphData, onNodeClick, width, height }: 
     ctx.fill();
 
     // Neon glow effect
-    ctx.shadowBlur = isHighRisk ? 20 : 12;
+    ctx.shadowBlur = (isMule || isRing) ? 20 : 12;
     ctx.shadowColor = glowColor;
 
     // Main node circle
@@ -85,14 +135,14 @@ export default function NetworkGraph({ graphData, onNodeClick, width, height }: 
     );
     ctx.fill();
 
-    // Label text
-    ctx.fillStyle = '#94a3b8';
+    // Label text with appropriate color
+    ctx.fillStyle = isNormal ? '#94a3b8' : glowColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(label, node.x, node.y + nodeRadius + 3);
 
     // Risk score badge for flagged nodes
-    if (isHighRisk) {
+    if ((isMule || isRing) && node.riskScore > 0) {
       const badgeText = `${node.riskScore}`;
       const badgeFontSize = 9 / globalScale;
       ctx.font = `bold ${badgeFontSize}px 'JetBrains Mono', monospace`;
@@ -117,30 +167,62 @@ export default function NetworkGraph({ graphData, onNodeClick, width, height }: 
   }, []);
 
   const paintLink = useCallback((link: any, ctx: CanvasRenderingContext2D) => {
-    const sourceRisk = link.source.riskScore || 0;
-    const targetRisk = link.target.riskScore || 0;
-    const maxRisk = Math.max(sourceRisk, targetRisk);
+    const sourceIsRing = link.source.type === 'ring';
+    const targetIsRing = link.target.type === 'ring';
+    const sourceIsMule = link.source.type === 'mule';
+    const targetIsMule = link.target.type === 'mule';
+    const isRingConnection = link.isRingConnection;
+    const bothNormal = link.source.type === 'normal' && link.target.type === 'normal';
 
-    const color = maxRisk > 80 ? '#ef444440' : maxRisk > 50 ? '#f59e0b30' : '#00E5FF20';
+    // Determine color and width based on edge type
+    let color, lineWidth, shouldAnimate;
+    
+    if (isRingConnection) {
+      // Fraud ring connections - pink/magenta
+      color = '#ec489980';
+      lineWidth = 3;
+      shouldAnimate = true;
+    } else if ((sourceIsRing && (targetIsMule || targetIsRing)) || (targetIsRing && (sourceIsMule || sourceIsRing))) {
+      // Ring member connections - orange
+      color = '#f59e0b80';
+      lineWidth = 2.5;
+      shouldAnimate = true;
+    } else if (sourceIsMule || targetIsMule) {
+      // General mule connections - red
+      color = '#ef444460';
+      lineWidth = 2;
+      shouldAnimate = sourceIsMule && targetIsMule;
+    } else if (bothNormal) {
+      // Normal user connections - blue/gray
+      color = '#94a3b820';
+      lineWidth = 1;
+      shouldAnimate = false;
+    } else {
+      // Default - cyan
+      color = '#00E5FF20';
+      lineWidth = 1;
+      shouldAnimate = false;
+    }
 
     ctx.beginPath();
     ctx.moveTo(link.source.x, link.source.y);
     ctx.lineTo(link.target.x, link.target.y);
     ctx.strokeStyle = color;
-    ctx.lineWidth = maxRisk > 80 ? 2 : 1;
+    ctx.lineWidth = lineWidth;
     ctx.stroke();
 
-    // Animated particles on high-risk links
-    if (maxRisk > 80) {
+    // Animated particles on flagged connections
+    if (shouldAnimate) {
       const t = (Date.now() % 2000) / 2000;
       const px = link.source.x + (link.target.x - link.source.x) * t;
       const py = link.source.y + (link.target.y - link.source.y) * t;
 
       ctx.beginPath();
       ctx.arc(px, py, 2, 0, 2 * Math.PI);
-      ctx.fillStyle = '#ef4444';
+      const particleColor = isRingConnection ? '#ec4899' : '#ef4444';
+      ctx.fillStyle = particleColor;
       ctx.shadowBlur = 8;
-      ctx.shadowColor = '#ef4444';
+      ctx.shadowColor = particleColor;
       ctx.fill();
       ctx.shadowBlur = 0;
     }
@@ -149,6 +231,7 @@ export default function NetworkGraph({ graphData, onNodeClick, width, height }: 
   return (
     <div className="force-graph-container w-full h-full">
       <ForceGraph2D
+        key={graphKey}
         ref={graphRef}
         graphData={data}
         width={width}
@@ -163,9 +246,14 @@ export default function NetworkGraph({ graphData, onNodeClick, width, height }: 
           ctx.fill();
         }}
         onNodeClick={(node: any) => onNodeClick(node as MuleNode)}
-        cooldownTicks={100}
+        cooldownTicks={200}
+        d3AlphaDecay={0.015}
+        d3VelocityDecay={0.35}
+        linkDistance={50}
+        linkStrength={1}
         enableZoomInteraction={true}
         enablePanInteraction={true}
+        enableNodeDrag={true}
       />
     </div>
   );

@@ -41,24 +41,29 @@ export default function LandingPage({ onUploadComplete, setIsLoading, onKycClick
       const formData = new FormData();
       formData.append('file', file);
 
-      try {
-        const response = await fetch('http://localhost:8000/detect', {
-          method: 'POST',
-          body: formData,
-        });
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      console.log('[LandingPage] Uploading to backend:', `${API_URL}/detect`);
+      const response = await fetch(`${API_URL}/detect`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          onUploadComplete(data);
-          return;
-        }
-      } catch {
-        // Backend unavailable — use mock
+      console.log('[LandingPage] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[LandingPage] Backend error:', errorText);
+        throw new Error(`Backend error ${response.status}: ${errorText}`);
       }
 
-      // Mock data for demo
-      const mockData = generateMockData();
-      onUploadComplete(mockData);
+      const data = await response.json();
+      console.log('[LandingPage] Backend data received:', data);
+      onUploadComplete(data);
+    } catch (err: any) {
+      console.error('[LandingPage] Upload failed:', err);
+      setError(`Connection failed: ${err.message}. Please ensure backend is running on port 8000.`);
+      // DO NOT use mock data - show error instead
+      throw err;
     } finally {
       setUploading(false);
       setIsLoading(false);
