@@ -64,10 +64,7 @@ export default function FileUpload({ onUploadComplete, isLoading, setIsLoading, 
       onUploadComplete(data);
     } catch (err: any) {
       console.error('Upload failed:', err);
-      setError(`Backend connection failed: ${err.message}. Using mock data for demo.`);
-      // If backend is unreachable, generate mock data for demo
-      const mockData = generateMockData();
-      onUploadComplete(mockData);
+      setError(`Backend connection failed: ${err.message}. Please ensure backend is running.`);
     } finally {
       setIsLoading(false);
     }
@@ -188,71 +185,4 @@ export default function FileUpload({ onUploadComplete, isLoading, setIsLoading, 
   );
 }
 
-// Mock data generator for demo when backend is unavailable
-function generateMockData() {
-  const names = [
-    'Viktor Petrov', 'Elena Sorokina', 'Dmitri Volkov', 'Natasha Federova',
-    'Sergei Kozlov', 'Olga Ivanova', 'Alexei Kuznetsov', 'Marina Popova',
-    'Andrei Smirnov', 'Irina Morozova', 'Boris Lebedev', 'Tatiana Novak',
-  ];
 
-  const patterns = [
-    'Rapid fund cycling', 'Structuring under $10K', 'Shell company transfers',
-    'Cross-border smurfing', 'Layered transactions', 'Round-trip wash',
-    'Velocity spike', 'Dormant account activation',
-  ];
-
-  const nodes = names.map((name, i) => ({
-    id: `ACC-${1000 + i}`,
-    name,
-    riskScore: Math.floor(Math.random() * 60) + 40,
-    type: (Math.random() > 0.6 ? 'mule' : Math.random() > 0.5 ? 'shell' : 'normal') as 'mule' | 'shell' | 'normal',
-    flaggedPatterns: patterns.filter(() => Math.random() > 0.6),
-    accountAge: `${Math.floor(Math.random() * 48) + 1} months`,
-    totalVolume: Math.floor(Math.random() * 500000) + 10000,
-    linkedAccounts: Math.floor(Math.random() * 8) + 1,
-  }));
-
-  // Make some high-risk
-  nodes[0].riskScore = 95;
-  nodes[0].type = 'mule';
-  nodes[0].flaggedPatterns = ['Rapid fund cycling', 'Cross-border smurfing', 'Velocity spike'];
-  nodes[1].riskScore = 88;
-  nodes[1].type = 'mule';
-  nodes[2].riskScore = 92;
-  nodes[2].type = 'shell';
-  nodes[3].riskScore = 85;
-  nodes[3].type = 'mule';
-
-  const links: { source: string; target: string; value: number }[] = [];
-  for (let i = 0; i < nodes.length; i++) {
-    const numLinks = Math.floor(Math.random() * 3) + 1;
-    for (let j = 0; j < numLinks; j++) {
-      const target = Math.floor(Math.random() * nodes.length);
-      if (target !== i) {
-        links.push({
-          source: nodes[i].id,
-          target: nodes[target].id,
-          value: Math.floor(Math.random() * 100000) + 5000,
-        });
-      }
-    }
-  }
-
-  // Create a cycle for the first few nodes
-  links.push({ source: nodes[0].id, target: nodes[1].id, value: 45000 });
-  links.push({ source: nodes[1].id, target: nodes[2].id, value: 43000 });
-  links.push({ source: nodes[2].id, target: nodes[3].id, value: 41000 });
-  links.push({ source: nodes[3].id, target: nodes[0].id, value: 39000 });
-
-  return {
-    mules: nodes.filter(n => n.riskScore > 80),
-    graph: { nodes, links },
-    summary: {
-      totalTransactions: 10247,
-      flaggedAccounts: nodes.filter(n => n.riskScore > 80).length,
-      averageRiskScore: Math.round(nodes.reduce((a, b) => a + b.riskScore, 0) / nodes.length),
-      detectedCycles: 3,
-    },
-  };
-}

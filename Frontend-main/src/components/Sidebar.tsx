@@ -1,4 +1,4 @@
-import { Shield, Activity, ChevronRight, Zap, ArrowLeftRight, ScanSearch } from 'lucide-react';
+import { Shield, Activity, ChevronRight, ArrowLeftRight, ScanSearch, ExternalLink } from 'lucide-react';
 import FileUpload from './FileUpload';
 
 interface SidebarProps {
@@ -13,7 +13,6 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Activity },
-  { id: 'disruption', label: 'Active Disruption', icon: Zap },
   { id: 'kyc', label: 'KYC Verify', icon: ScanSearch },
   { id: 'transactions', label: 'Blockchain Audit', icon: ArrowLeftRight },
 ];
@@ -55,6 +54,24 @@ export default function Sidebar({
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
+
+          // Blockchain Audit opens Lora explorer in a new tab
+          if (item.id === 'transactions') {
+            return (
+              <a
+                key={item.id}
+                href="https://lora.algokit.io/testnet/application/755804610"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group text-gray-400 hover:text-gray-200 hover:bg-white/5"
+              >
+                <Icon className="w-4 h-4 text-gray-500 group-hover:text-gray-300" />
+                <span className="flex-1 text-left">{item.label}</span>
+                <ExternalLink className="w-3.5 h-3.5 text-gray-500/60" />
+              </a>
+            );
+          }
+
           return (
             <button
               key={item.id}
