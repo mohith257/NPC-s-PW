@@ -17,7 +17,7 @@
 <p align="center">
   <a href="https://npcfrontend2.vercel.app/">🌐 Live Demo</a> •
   <a href="https://lora.algokit.io/testnet/application/755804610">🔗 Smart Contract on Lora</a> •
-  <a href="https://web-production-31faa.up.railway.app/">⚙️ API Endpoint</a>
+  <a href="https://backend-npc-j7wx.onrender.com/">⚙️ API Endpoint</a>
 </p>
 
 ---
@@ -408,7 +408,7 @@ Verify a PAN number against IPFS-stored KYC records.
 | Service | Platform | URL |
 |---|---|---|
 | **Frontend** | Vercel | [npcfrontend2.vercel.app](https://npcfrontend2.vercel.app/) |
-| **Backend** | Railway | [web-production-31faa.up.railway.app](https://web-production-31faa.up.railway.app/) |
+| **Backend** | Render | [backend-npc-j7wx.onrender.com](https://backend-npc-j7wx.onrender.com/) |
 | **Smart Contract** | Algorand TestNet | [App ID 755804610](https://lora.algokit.io/testnet/application/755804610) |
 | **IPFS** | Kubo Node | CID: `QmdSjyrrBLvdH4Gjda1wMrk9sGrLowGBEbP5VnxuNZkydN` |
 
@@ -549,7 +549,7 @@ python -m smart_contracts deploy
 ### Frontend (Vercel Environment Variables)
 | Variable | Value | Description |
 |---|---|---|
-| `VITE_API_URL` | `https://web-production-31faa.up.railway.app` | Backend API base URL (baked in at build time) |
+| `VITE_API_URL` | `https://backend-npc-j7wx.onrender.com` | Backend API base URL (baked in at build time) |
 
 > **Important**: Vite env vars are embedded at **build time**. After changing `VITE_API_URL`, you must **redeploy** on Vercel for the change to take effect.
 

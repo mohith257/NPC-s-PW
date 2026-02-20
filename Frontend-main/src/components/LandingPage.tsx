@@ -41,7 +41,7 @@ export default function LandingPage({ onUploadComplete, setIsLoading, onKycClick
       const formData = new FormData();
       formData.append('file', file);
 
-      const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-31faa.up.railway.app';
+      const API_URL = import.meta.env.VITE_API_URL || 'https://backend-npc-j7wx.onrender.com';
       console.log('[LandingPage] Uploading to backend:', `${API_URL}/detect`);
       const response = await fetch(`${API_URL}/detect`, {
         method: 'POST',
@@ -60,7 +60,7 @@ export default function LandingPage({ onUploadComplete, setIsLoading, onKycClick
       console.log('[LandingPage] Backend data received:', data);
       onUploadComplete(data);
     } catch (err: any) {
-      const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-31faa.up.railway.app';
+      const API_URL = import.meta.env.VITE_API_URL || 'https://backend-npc-j7wx.onrender.com';
       console.error('[LandingPage] Upload failed:', err, 'API_URL:', API_URL);
       setError(`Connection failed: ${err.message}. Tried: ${API_URL}/detect`);
     } finally {

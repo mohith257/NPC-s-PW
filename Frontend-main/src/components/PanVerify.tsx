@@ -58,7 +58,7 @@ export default function PanVerify() {
       }
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-31faa.up.railway.app';
+        const API_URL = import.meta.env.VITE_API_URL || 'https://backend-npc-j7wx.onrender.com';
         const response = await fetch(`${API_URL}/verify-pan`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
